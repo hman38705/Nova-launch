@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+target/
+
+# Environment
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+*.wasm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Documentation (excluding README.md)
+*.md
+!README.md
