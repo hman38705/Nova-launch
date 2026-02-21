@@ -138,6 +138,30 @@ fn test_update_fees() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #2)")]
+fn test_unauthorized_fee_update() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let non_admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+
+    client.initialize(&admin, &treasury, &70_000_000, &30_000_000);
+
+    // Verify initial fees are set correctly
+    let state = client.get_state();
+    assert_eq!(state.base_fee, 70_000_000);
+    assert_eq!(state.metadata_fee, 30_000_000);
+
+    // Non-admin attempts to update fees - should panic with Unauthorized error (#2)
+    client.update_fees(&non_admin, &Some(100_000_000), &None);
+}
+
+#[test]
 #[ignore]
 fn test_create_token() {
     let env = Env::default();
