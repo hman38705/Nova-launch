@@ -1,158 +1,414 @@
-# Nova Backend API
+# Nova Launch Admin Dashboard API
 
-Backend API for the Nova token deployment platform. Built with Next.js 14+ App Router, Stellar SDK, and Prisma.
+Backend API for the Nova Launch admin dashboard with protected endpoints for platform management, statistics, and content moderation.
 
-## Prerequisites
+## Features
 
-- **Node.js** 18+ (20+ recommended)
-- **npm** 9+
+- 🔐 Admin authentication with JWT
+- 👥 Role-based access control (RBAC)
+- 📊 Platform statistics and analytics
+- 🎯 Token management (flag, soft delete, update)
+- 👤 User management (ban, role changes)
+- 📝 Comprehensive audit logging
+- 📤 Data export functionality
+- 🔒 Rate limiting and security headers
 
-## Setup
+## Tech Stack
 
-1. **Install dependencies**
+- Node.js + Express
+- TypeScript
+- JWT for authentication
+- Zod for validation
+- Vitest for testing
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. **Configure environment**
+### Installation
 
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Edit `.env.local` and fill in the required values. See [Environment Variables](#environment-variables) below.
-
-3. **Initialize the database**
-
-   ```bash
-   npm run db:generate
-   npm run db:push
-   ```
-
-4. **Run the development server**
-
-   ```bash
-   npm run dev
-   ```
-
-   The API will be available at [http://localhost:3001](http://localhost:3001).
-
-## Scripts
-
-| Script          | Description                          |
-| --------------- | ------------------------------------ |
-| `npm run dev`   | Start development server (port 3001) |
-| `npm run build` | Build for production                 |
-| `npm run start` | Start production server              |
-| `npm run lint`  | Run ESLint                           |
-| `npm run format`| Format code with Prettier            |
-| `npm run format:check` | Check formatting with Prettier |
-| `npm run test`  | Run tests                            |
-| `npm run db:generate` | Generate Prisma Client           |
-| `npm run db:push`     | Push schema to database          |
-| `npm run db:studio`   | Open Prisma Studio              |
-
-## Environment Variables
-
-| Variable                | Description                         | Example                                  |
-| ----------------------- | ----------------------------------- | ---------------------------------------- |
-| `DATABASE_URL`          | Prisma database connection string   | `file:./dev.db`                           |
-| `STELLAR_NETWORK`       | Stellar network (testnet/mainnet)   | `testnet`                                 |
-| `STELLAR_HORIZON_URL`   | Stellar Horizon API URL             | `https://horizon-testnet.stellar.org`     |
-| `STELLAR_SOROBAN_RPC_URL` | Soroban RPC URL                   | `https://soroban-testnet.stellar.org`     |
-| `FACTORY_CONTRACT_ID`   | Token factory contract ID           |                                          |
-| `IPFS_API_KEY`          | IPFS API key (optional)             |                                          |
-| `IPFS_API_SECRET`       | IPFS API secret (optional)          |                                          |
-| `PINATA_API_KEY`        | Pinata API key for IPFS             |                                          |
-| `PINATA_API_SECRET`     | Pinata API secret for IPFS          |                                          |
-| `JWT_SECRET`            | Secret for JWT signing              |                                          |
-| `CORS_ORIGIN`           | Allowed CORS origin                 | `http://localhost:5173`                   |
-
-## API Routes
-
-| Endpoint      | Method | Description        |
-| ------------- | ------ | ------------------ |
-| `/api/health` | GET    | Health check       |
-| `/api/tokens` | GET    | Token operations   |
-| `/api/burn`   | POST   | Burn tokens        |
-| `/api/metadata` | GET  | Token metadata     |
-| `/api/metadata/upload` | POST | Upload metadata and image to IPFS |
-| `/api/metadata/[cid]` | GET | Retrieve metadata from IPFS |
-
-## Metadata API
-
-### POST /api/metadata/upload
-
-Upload metadata and image to IPFS.
-
-**Body (FormData):**
-- `name` (string, required): Token name
-- `symbol` (string, required): Token symbol
-- `decimals` (number, required): Token decimals
-- `description` (string, optional): Token description
-- `image` (File, optional): Token image (max 5MB, JPEG/PNG/GIF/WebP)
-- `properties` (JSON string, optional): Additional metadata
-
-**Response:**
-```json
-{
-  "success": true,
-  "cid": "QmXyZ..."
-}
+```bash
+cd backend
+npm install
 ```
 
-### GET /api/metadata/[cid]
+### Environment Setup
 
-Retrieve metadata from IPFS.
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+Required environment variables:
+- `PORT` - Server port (default: 3001)
+- `ADMIN_JWT_SECRET` - Secret for admin JWT tokens
+- `DATABASE_URL` - Database connection string
+
+### Development
+
+```bash
+npm run dev
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Production
+
+```bash
+npm start
+```
+
+### Testing
+
+```bash
+npm test
+```
+
+## API Endpoints
+
+### Authentication
+
+All admin endpoints require authentication via Bearer token:
+
+```
+Authorization: Bearer <admin_jwt_token>
+```
+
+### Statistics
+
+#### GET /api/admin/stats
+
+Get platform statistics including:
+- Total tokens created
+- Total burns executed
+- Total volume burned
+- Active users count
+- Revenue generated
+- Platform health metrics
+- Growth metrics (daily/weekly/monthly)
 
 **Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "name": "Token Name",
-    "symbol": "TKN",
-    "description": "...",
-    "image": "ipfs://...",
-    "decimals": 18,
-    "properties": {}
+  "totalTokens": 150,
+  "totalBurns": 45,
+  "totalVolumeBurned": "1000000",
+  "activeUsers": 89,
+  "revenueGenerated": "5000",
+  "platformHealth": {
+    "uptime": 86400,
+    "errorRate": 0.01,
+    "avgResponseTime": 150
+  },
+  "growth": {
+    "daily": { "newTokens": 5, "newUsers": 12, "burnVolume": "50000", "revenue": "250" },
+    "weekly": { "newTokens": 28, "newUsers": 67, "burnVolume": "300000", "revenue": "1500" },
+    "monthly": { "newTokens": 120, "newUsers": 250, "burnVolume": "900000", "revenue": "4500" }
   }
 }
 ```
 
-## Features
+### Token Management
 
-- ✅ File size validation (max 5MB)
-- ✅ Image type validation (JPEG, PNG, GIF, WebP)
-- ✅ Metadata format validation
-- ✅ IPFS upload via Pinata
-- ✅ Response caching (1 hour)
-- ✅ Error handling
-- ✅ Stellar integration
-- ✅ Database with Prisma
+#### GET /api/admin/tokens
 
-## Project Structure
+List all tokens with optional filters.
+
+**Query Parameters:**
+- `flagged` - Filter by flagged status (true/false)
+- `deleted` - Include deleted tokens (true/false)
+- `creator` - Filter by creator address
+- `search` - Search by name, symbol, or address
+
+**Response:**
+```json
+{
+  "tokens": [...],
+  "total": 150
+}
+```
+
+#### GET /api/admin/tokens/:id
+
+Get detailed token information including creator details.
+
+**Response:**
+```json
+{
+  "token": {
+    "id": "token_1",
+    "name": "Sample Token",
+    "symbol": "SMPL",
+    "contractAddress": "CTOKEN...",
+    "creatorAddress": "GCREATOR...",
+    "totalSupply": "1000000",
+    "burned": "50000",
+    "flagged": false,
+    "deleted": false,
+    "metadata": {},
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  },
+  "creator": {
+    "id": "user_1",
+    "address": "GCREATOR...",
+    "role": "user",
+    "banned": false,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### PATCH /api/admin/tokens/:id
+
+Update token (flag/unflag, update metadata).
+
+**Permissions:** Admin or Super Admin
+
+**Request Body:**
+```json
+{
+  "flagged": true,
+  "metadata": {
+    "reason": "Suspicious activity",
+    "reviewedBy": "admin_1"
+  }
+}
+```
+
+#### DELETE /api/admin/tokens/:id
+
+Soft delete a token.
+
+**Permissions:** Super Admin only
+
+### User Management
+
+#### GET /api/admin/users
+
+List all users with optional filters.
+
+**Query Parameters:**
+- `banned` - Filter by banned status (true/false)
+- `role` - Filter by role (user/admin/super_admin)
+- `search` - Search by address or ID
+
+**Response:**
+```json
+{
+  "users": [...],
+  "total": 89
+}
+```
+
+#### GET /api/admin/users/:id
+
+Get user details with activity and tokens.
+
+**Response:**
+```json
+{
+  "user": {...},
+  "tokens": [...],
+  "activity": {
+    "tokensCreated": 5,
+    "totalBurned": "100000",
+    "adminActions": 0
+  },
+  "recentAuditLogs": [...]
+}
+```
+
+#### PATCH /api/admin/users/:id
+
+Update user (ban/unban, change role).
+
+**Permissions:** Super Admin only
+
+**Request Body:**
+```json
+{
+  "banned": true,
+  "role": "admin"
+}
+```
+
+#### GET /api/admin/users/:id/export
+
+Export user data including all tokens and activity.
+
+**Response:** JSON file download
+
+### Audit Logs
+
+#### GET /api/admin/audit
+
+Get audit logs with filters and pagination.
+
+**Query Parameters:**
+- `adminId` - Filter by admin ID
+- `action` - Filter by action type
+- `resource` - Filter by resource type
+- `startDate` - Filter by start date (ISO 8601)
+- `endDate` - Filter by end date (ISO 8601)
+- `limit` - Results per page (default: 50)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "logs": [...],
+  "pagination": {
+    "total": 500,
+    "limit": 50,
+    "offset": 0,
+    "hasMore": true
+  }
+}
+```
+
+#### GET /api/admin/audit/export
+
+Export audit logs as JSON file.
+
+**Query Parameters:** Same as GET /api/admin/audit
+
+**Response:** JSON file download
+
+## Role-Based Access Control
+
+### Roles
+
+1. **user** - Regular platform users (no admin access)
+2. **admin** - Can view stats, manage tokens, view users
+3. **super_admin** - Full access including user management and deletions
+
+### Permission Matrix
+
+| Endpoint | User | Admin | Super Admin |
+|----------|------|-------|-------------|
+| GET /api/admin/stats | ❌ | ✅ | ✅ |
+| GET /api/admin/tokens | ❌ | ✅ | ✅ |
+| PATCH /api/admin/tokens/:id | ❌ | ✅ | ✅ |
+| DELETE /api/admin/tokens/:id | ❌ | ❌ | ✅ |
+| GET /api/admin/users | ❌ | ✅ | ✅ |
+| PATCH /api/admin/users/:id | ❌ | ❌ | ✅ |
+| GET /api/admin/audit | ❌ | ✅ | ✅ |
+
+## Audit Logging
+
+All admin actions are automatically logged with:
+- Admin ID
+- Action type (method + endpoint)
+- Resource type and ID
+- Before/after state
+- IP address and user agent
+- Timestamp
+
+Audit logs are searchable, filterable, and exportable.
+
+## Security Features
+
+- JWT-based authentication
+- Role-based access control
+- Rate limiting (100 requests per 15 minutes)
+- Helmet.js security headers
+- CORS protection
+- Input validation with Zod
+- Soft deletes (data preservation)
+
+## Error Handling
+
+All endpoints return consistent error responses:
+
+```json
+{
+  "error": "Error message",
+  "details": {} // Optional validation details
+}
+```
+
+HTTP Status Codes:
+- 200 - Success
+- 400 - Bad Request (validation error)
+- 401 - Unauthorized (missing/invalid token)
+- 403 - Forbidden (insufficient permissions)
+- 404 - Not Found
+- 500 - Internal Server Error
+
+## Development
+
+### Project Structure
 
 ```
 backend/
-├── prisma/
-│   └── schema.prisma
 ├── src/
-│   ├── app/
-│   │   └── api/          # API routes
-│   │       ├── health/
-│   │       ├── tokens/
-│   │       ├── burn/
-│   │       └── metadata/ # Metadata management
-│   ├── lib/
-│   │   ├── stellar/      # Stellar SDK integration
-│   │   ├── database/     # Prisma client
-│   │   ├── ipfs/         # IPFS/Pinata integration
-│   │   ├── validation/   # Validators
-│   │   └── utils/        # Shared utilities
-│   ├── types/            # TypeScript types
-│   └── middleware.ts
+│   ├── config/
+│   │   └── database.ts       # Database operations
+│   ├── middleware/
+│   │   ├── auth.ts           # Authentication & RBAC
+│   │   └── auditLog.ts       # Audit logging
+│   ├── routes/
+│   │   └── admin/
+│   │       ├── index.ts      # Route aggregator
+│   │       ├── stats.ts      # Statistics endpoints
+│   │       ├── tokens.ts     # Token management
+│   │       ├── users.ts      # User management
+│   │       └── audit.ts      # Audit logs
+│   ├── types/
+│   │   └── index.ts          # TypeScript types
+│   ├── __tests__/
+│   │   └── admin.test.ts     # Tests
+│   └── index.ts              # Main application
 ├── .env.example
-└── package.json
+├── package.json
+├── tsconfig.json
+└── vitest.config.ts
 ```
+
+## Testing
+
+Run tests with coverage:
+
+```bash
+npm test
+```
+
+Tests cover:
+- Database operations
+- User management
+- Token management
+- Audit logging
+- Filtering and pagination
+
+## Deployment
+
+1. Build the application:
+```bash
+npm run build
+```
+
+2. Set production environment variables
+
+3. Start the server:
+```bash
+npm start
+```
+
+## Future Enhancements
+
+- [ ] PostgreSQL/MongoDB integration
+- [ ] Real-time notifications
+- [ ] Advanced analytics dashboard
+- [ ] Bulk operations
+- [ ] Scheduled reports
+- [ ] Two-factor authentication
+- [ ] IP whitelisting
+- [ ] API versioning
+
+## License
+
+MIT
