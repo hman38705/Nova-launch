@@ -230,6 +230,55 @@ impl TokenFactory {
         Ok(())
     }
 
+    /// Batch burn tokens from multiple addresses (gas optimized)
+    pub fn burn_batch(
+        env: Env,
+        token_address: Address,
+        burns: soroban_sdk::Vec<(Address, i128)>,
+    ) -> Result<(), Error> {
+        // Early validation and auth checks
+        let mut total_burned: i128 = 0;
+        
+        for (from, amount) in burns.iter() {
+            from.require_auth();
+            
+            if amount <= 0 {
+                return Err(Error::InvalidBurnAmount);
+            }
+            
+            total_burned = total_burned.checked_add(amount)
+                .ok_or(Error::InvalidParameters)?;
+        }
+        
+        // Single token lookup
+        let count = storage::get_token_count(&env);
+        let mut token_index: Option<u32> = None;
+        
+        for i in 0..count {
+            if let Some(info) = storage::get_token_info(&env, i) {
+                if info.address == token_address {
+                    token_index = Some(i);
+                    break;
+                }
+            }
+        }
+        
+        let index = token_index.ok_or(Error::TokenNotFound)?;
+        let mut info = storage::get_token_info(&env, index).ok_or(Error::TokenNotFound)?;
+        
+        // Validate total doesn't exceed supply
+        if total_burned > info.total_supply {
+            return Err(Error::BurnAmountExceedsBalance);
+        }
+        
+        // Single storage update
+        info.total_supply -= total_burned;
+        info.total_burned += total_burned;
+        storage::set_token_info(&env, index, &info);
+        
+        Ok(())
+    }
+
     /// Get token info by address
     pub fn get_token_info_by_address(env: Env, token_address: Address) -> Result<TokenInfo, Error> {
         let count = storage::get_token_count(&env);
@@ -272,3 +321,6 @@ mod metadata_immutability_test;
 
 #[cfg(test)]
 mod token_registry_test;
+
+#[cfg(test)]
+mod gas_bench_test;

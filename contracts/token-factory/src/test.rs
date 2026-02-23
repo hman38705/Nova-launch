@@ -690,3 +690,142 @@ fn test_admin_burn_exceeds_balance() {
 
     factory.admin_burn(&token_address, &creator, &user, &2_000_000);
 }
+
+#[test]
+fn test_burn_batch_success() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let user1 = Address::generate(&env);
+    let user2 = Address::generate(&env);
+    let user3 = Address::generate(&env);
+
+    let factory = TokenFactoryClient::new(&env, &env.register_contract(None, TokenFactory));
+    factory.initialize(&admin, &treasury, &70_000_000, &30_000_000);
+
+    let token_address = factory.create_token(
+        &creator,
+        &String::from_str(&env, "Batch Token"),
+        &String::from_str(&env, "BATCH"),
+        &7,
+        &10_000_000,
+        &None,
+        &70_000_000,
+    );
+
+    let burns = soroban_sdk::vec![
+        &env,
+        (user1.clone(), 100_000),
+        (user2.clone(), 200_000),
+        (user3.clone(), 150_000),
+    ];
+
+    factory.burn_batch(&token_address, &burns);
+
+    let info = factory.get_token_info_by_address(&token_address);
+    assert_eq!(info.total_supply, 9_550_000);
+    assert_eq!(info.total_burned, 450_000);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #9)")]
+fn test_burn_batch_invalid_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let user1 = Address::generate(&env);
+    let user2 = Address::generate(&env);
+
+    let factory = TokenFactoryClient::new(&env, &env.register_contract(None, TokenFactory));
+    factory.initialize(&admin, &treasury, &70_000_000, &30_000_000);
+
+    let token_address = factory.create_token(
+        &creator,
+        &String::from_str(&env, "Invalid Batch"),
+        &String::from_str(&env, "INVB"),
+        &7,
+        &10_000_000,
+        &None,
+        &70_000_000,
+    );
+
+    let burns = soroban_sdk::vec![
+        &env,
+        (user1.clone(), 100_000),
+        (user2.clone(), 0),
+    ];
+
+    factory.burn_batch(&token_address, &burns);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_burn_batch_exceeds_supply() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let user1 = Address::generate(&env);
+    let user2 = Address::generate(&env);
+
+    let factory = TokenFactoryClient::new(&env, &env.register_contract(None, TokenFactory));
+    factory.initialize(&admin, &treasury, &70_000_000, &30_000_000);
+
+    let token_address = factory.create_token(
+        &creator,
+        &String::from_str(&env, "Exceed Batch"),
+        &String::from_str(&env, "EXCB"),
+        &7,
+        &1_000_000,
+        &None,
+        &70_000_000,
+    );
+
+    let burns = soroban_sdk::vec![
+        &env,
+        (user1.clone(), 600_000),
+        (user2.clone(), 500_000),
+    ];
+
+    factory.burn_batch(&token_address, &burns);
+}
+
+#[test]
+fn test_burn_batch_single_address() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let user = Address::generate(&env);
+
+    let factory = TokenFactoryClient::new(&env, &env.register_contract(None, TokenFactory));
+    factory.initialize(&admin, &treasury, &70_000_000, &30_000_000);
+
+    let token_address = factory.create_token(
+        &creator,
+        &String::from_str(&env, "Single Batch"),
+        &String::from_str(&env, "SINB"),
+        &7,
+        &5_000_000,
+        &None,
+        &70_000_000,
+    );
+
+    let burns = soroban_sdk::vec![&env, (user.clone(), 1_000_000)];
+
+    factory.burn_batch(&token_address, &burns);
+
+    let info = factory.get_token_info_by_address(&token_address);
+    assert_eq!(info.total_supply, 4_000_000);
+    assert_eq!(info.total_burned, 1_000_000);
+}
