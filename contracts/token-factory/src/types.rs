@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use soroban_sdk::{contracterror, contracttype, Address, String};
 
 #[contracttype]
@@ -23,23 +25,31 @@ pub struct TokenInfo {
 }
 
 #[contracttype]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
     Admin,
     Treasury,
     BaseFee,
     MetadataFee,
     TokenCount,
-    Token(u32), // Token index -> TokenInfo
+    Token(u32),            // Token index -> TokenInfo  (existing)
+    Balance(u32, Address), // (token_index, holder)     -> i128   (NEW — burn)
+    BurnCount(u32),        // token_index               -> u32    (NEW — burn)
 }
 
 #[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
-    InsufficientFee = 1,
-    Unauthorized = 2,
-    InvalidParameters = 3,
-    TokenNotFound = 4,
-    MetadataAlreadySet = 5,
-    AlreadyInitialized = 6,
+    // ── pre-existing ──────────────────────────────────────
+    InsufficientFee     = 1,
+    Unauthorized        = 2,
+    InvalidParameters   = 3,
+    TokenNotFound       = 4,
+    MetadataAlreadySet  = 5,
+    AlreadyInitialized  = 6,
+
+    // ── burn feature ──────────────────────────────────────
+    InsufficientBalance = 7, // holder balance < requested burn amount
+    ArithmeticError     = 8, // checked_sub / checked_add returned None
+    BatchTooLarge       = 9, // batch_burn entry count > MAX_BATCH_BURN
 }
