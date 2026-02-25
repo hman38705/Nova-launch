@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import adminRoutes from "./routes/admin";
 import leaderboardRoutes from "./routes/leaderboard";
+import tokenRoutes from "./routes/tokens";
 import { Database } from "./config/database";
 
 dotenv.config();
@@ -30,6 +31,7 @@ const limiter = rateLimit({
 
 app.use("/api/admin", limiter);
 app.use("/api/leaderboard", limiter);
+app.use("/api/tokens", limiter);
 
 // Body parsing middleware
 app.use(express.json());
@@ -41,6 +43,7 @@ Database.initialize();
 // Routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/tokens", tokenRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
