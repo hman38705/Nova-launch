@@ -55,6 +55,9 @@ pub fn get_token_info(env: &Env, index: u32) -> Option<TokenInfo> {
 
 pub fn set_token_info(env: &Env, index: u32, info: &TokenInfo) {
     env.storage().instance().set(&DataKey::Token(index), info);
+    
+    // Emit token registered event
+    crate::events::emit_token_registered(env, &info.address, &info.creator);
 }
 
 pub fn increment_token_count(env: &Env) -> u32 {
@@ -87,7 +90,7 @@ pub fn get_factory_state(env: &Env) -> FactoryState {
 ///  [INPUT] Input Validation
 ///  [DOS]   DoS & Resource Exhaustion
 
-// Temporarily disabled due to compilation issues
+// Temporarily disabled - has compilation errors
 /*
 #[cfg(test)]
 mod burn_security_tests {
