@@ -405,3 +405,6 @@ mod fuzz_string_boundaries;
 
 #[cfg(test)]
 mod upgrade_test;
+
+#[cfg(test)]
+mod gas_benchmark_comprehensive;
