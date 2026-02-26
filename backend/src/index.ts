@@ -68,7 +68,10 @@ app.use(
       errorResponse({
         code: "INTERNAL_SERVER_ERROR",
         message: err.message || "Internal server error",
-        details: process.env.NODE_ENV === "development" ? { stack: err.stack } : undefined,
+        details:
+          process.env.NODE_ENV === "development"
+            ? { stack: err.stack }
+            : undefined,
       })
     );
   }
