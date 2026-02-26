@@ -5,8 +5,15 @@ mod storage;
 mod burn;
 mod types;
 
-use soroban_sdk::{contract, contractimpl, Address, Env};
-use types::{Error, FactoryState, TokenInfo};
+use soroban_sdk::{contract, contractimpl, Address, Env, String};
+use types::{ContractMetadata, Error, FactoryState, TokenInfo};
+
+// Contract metadata constants
+const CONTRACT_NAME: &str = "Nova Launch Token Factory";
+const CONTRACT_DESCRIPTION: &str = "No-code token deployment on Stellar";
+const CONTRACT_AUTHOR: &str = "Nova Launch Team";
+const CONTRACT_LICENSE: &str = "MIT";
+const CONTRACT_VERSION: &str = "1.0.0";
 
 #[contract]
 pub struct TokenFactory;
@@ -44,6 +51,23 @@ impl TokenFactory {
     /// Get the current factory state
     pub fn get_state(env: Env) -> FactoryState {
         storage::get_factory_state(&env)
+    }
+
+    /// Get contract metadata
+    ///
+    /// Returns descriptive information about the contract including
+    /// name, description, author, license, and version.
+    ///
+    /// # Returns
+    /// ContractMetadata struct with contract information
+    pub fn get_metadata(env: Env) -> ContractMetadata {
+        ContractMetadata {
+            name: String::from_str(&env, CONTRACT_NAME),
+            description: String::from_str(&env, CONTRACT_DESCRIPTION),
+            author: String::from_str(&env, CONTRACT_AUTHOR),
+            license: String::from_str(&env, CONTRACT_LICENSE),
+            version: String::from_str(&env, CONTRACT_VERSION),
+        }
     }
 
     /// Transfer admin rights to a new address
@@ -379,10 +403,6 @@ impl TokenFactory {
         burn::burn(&env, caller, token_index, amount)
     }
 
-    pub fn admin_burn(env: Env, admin: Address, token_index: u32, holder: Address, amount: i128) -> Result<(), Error> {
-        burn::admin_burn(&env, admin, token_index, holder, amount)
-    }
-
     pub fn batch_burn(env: Env, admin: Address, token_index: u32, burns: soroban_sdk::Vec<(Address, i128)>) -> Result<(), Error> {
         burn::batch_burn(&env, admin, token_index, burns)
     }
@@ -407,6 +427,9 @@ mod event_tests;
 
 #[cfg(test)]
 mod pause_test;
+
+#[cfg(test)]
+mod metadata_test;
 
 // Temporarily disabled due to compilation issues
 // #[cfg(test)]
