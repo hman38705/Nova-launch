@@ -9,11 +9,15 @@ import leaderboardRoutes from "./routes/leaderboard";
 import tokenRoutes from "./routes/tokens";
 import { Database } from "./config/database";
 import { successResponse, errorResponse } from "./utils/response";
+import { requestLoggingMiddleware } from "./middleware/request-logging.middleware";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Request logging middleware (first to capture all requests)
+app.use(requestLoggingMiddleware);
 
 // Security middleware
 app.use(helmet());
