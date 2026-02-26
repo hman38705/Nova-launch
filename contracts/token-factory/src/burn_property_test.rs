@@ -457,3 +457,4 @@ mod property_tests {
         // factory.burn(&token_address, &unauthorized, &100);
     }
 }
+

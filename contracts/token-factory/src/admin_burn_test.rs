@@ -358,3 +358,4 @@ fn test_admin_burn_from_different_addresses() {
     assert_eq!(token_info.total_burned, 80_000_0000000);
     assert_eq!(token_info.burn_count, 2);
 }
+
