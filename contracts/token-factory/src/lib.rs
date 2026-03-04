@@ -14,7 +14,7 @@ mod treasury;
 use soroban_sdk::{contract, contractimpl, Address, Env};
 use types::{Error, FactoryState, TokenInfo, TokenStats};
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, String};
 use types::{ContractMetadata, Error, FactoryState, TokenInfo};
 
 // Contract metadata constants

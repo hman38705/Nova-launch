@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use soroban_sdk::{contracterror, contracttype, Address, String};
+use soroban_sdk::{contracterror, contracttype, Address, String, Vec};
 
 /// Factory state containing administrative configuration
 ///
