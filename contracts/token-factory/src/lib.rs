@@ -805,6 +805,83 @@ impl TokenFactory {
     pub fn get_burn_count(env: Env, token_index: u32) -> u32 {
         burn::get_burn_count(&env, token_index)
     }
+    /// Set metadata URI for a token (one-time only)
+    ///
+    /// Allows the token creator to set an IPFS metadata URI for their token.
+    /// This operation can only be performed once per token - metadata is
+    /// immutable after being set to ensure data integrity and trust.
+    ///
+    /// # Mutability Rules
+    /// - Metadata can only be set if it's currently `None`
+    /// - Once set, metadata cannot be changed or removed
+    /// - This ensures permanent, tamper-proof token metadata
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `token_index` - Index of the token to update
+    /// * `admin` - Token creator address (must authorize and match creator)
+    /// * `metadata_uri` - IPFS URI for token metadata (e.g., "ipfs://Qm...")
+    ///
+    /// # Returns
+    /// Returns `Ok(())` on success
+    ///
+    /// # Errors
+    /// * `Error::ContractPaused` - Contract is currently paused
+    /// * `Error::TokenNotFound` - Token index is invalid
+    /// * `Error::Unauthorized` - Caller is not the token creator
+    /// * `Error::MetadataAlreadySet` - Metadata has already been set (immutable)
+    ///
+    /// # Examples
+    /// ```
+    /// // Set metadata for the first time
+    /// let metadata_uri = String::from_str(&env, "ipfs://QmTest123");
+    /// factory.set_metadata(&env, 0, creator, metadata_uri)?;
+    ///
+    /// // Attempting to change metadata will fail
+    /// let new_uri = String::from_str(&env, "ipfs://QmTest456");
+    /// let result = factory.set_metadata(&env, 0, creator, new_uri);
+    /// assert_eq!(result, Err(Error::MetadataAlreadySet));
+    /// ```
+    pub fn set_metadata(
+        env: Env,
+        token_index: u32,
+        admin: Address,
+        metadata_uri: String,
+    ) -> Result<(), Error> {
+        // Early return if contract is paused
+        if storage::is_paused(&env) {
+            return Err(Error::ContractPaused);
+        }
+
+        // Require admin authorization
+        admin.require_auth();
+
+        // Get token info
+        let mut token_info = storage::get_token_info(&env, token_index)
+            .ok_or(Error::TokenNotFound)?;
+
+        // Verify admin is the token creator
+        if token_info.creator != admin {
+            return Err(Error::Unauthorized);
+        }
+
+        // Enforce immutability: metadata can only be set once
+        if token_info.metadata_uri.is_some() {
+            return Err(Error::MetadataAlreadySet);
+        }
+
+        // Set metadata URI
+        token_info.metadata_uri = Some(metadata_uri.clone());
+        storage::set_token_info(&env, token_index, &token_info);
+
+        // Also update by address lookup
+        storage::set_token_info_by_address(&env, &token_info.address, &token_info);
+
+        // Emit metadata set event
+        events::emit_metadata_set(&env, &token_info.address, &admin, &metadata_uri);
+
+        Ok(())
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Timelock Functions

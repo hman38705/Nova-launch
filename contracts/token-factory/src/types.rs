@@ -60,6 +60,8 @@ pub struct ContractMetadata {
 /// * `created_at` - Unix timestamp of token creation
 /// * `total_burned` - Cumulative amount of tokens burned
 /// * `burn_count` - Number of burn operations performed
+/// * `metadata_uri` - Optional IPFS URI for additional metadata
+/// * `created_at` - Unix timestamp of token creation
 /// * `clawback_enabled` - Whether admin can burn from any address
 ///
 /// # Examples
