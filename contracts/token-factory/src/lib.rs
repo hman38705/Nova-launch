@@ -17,6 +17,8 @@ mod differential_engine;
 mod stream_types;
 mod token_creation;
 #[cfg(test)]
+mod test_helpers;
+#[cfg(test)]
 mod comprehensive_differential_tests;
 #[cfg(test)]
 mod differential_proptest;
