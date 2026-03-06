@@ -242,6 +242,74 @@ pub fn claim_stream(
     Ok(claimable)
 }
 
+/// Batch claim vested tokens from multiple streams
+///
+/// Allows recipient to claim tokens that have vested according to schedule
+/// from multiple streams in a single transaction. Streams that cannot be
+/// claimed (e.g. before cliff or zero remaining) are skipped without error.
+///
+/// # Arguments
+/// * `env` - The contract environment
+/// * `recipient` - Address claiming tokens (must authorize)
+/// * `stream_ids` - Vector of stream IDs to claim from
+///
+/// # Returns
+/// Returns a vector of claimed amounts matching the input order
+///
+/// # Errors
+/// * `Error::Unauthorized` - Caller is not the recipient for one of the streams
+/// * `Error::TokenNotFound` - Stream not found
+/// * `Error::InvalidParameters` - Stream cancelled
+pub fn batch_claim(
+    env: &Env,
+    recipient: &Address,
+    stream_ids: &Vec<u64>,
+) -> Result<Vec<i128>, Error> {
+    recipient.require_auth();
+    
+    // First pass: validate all streams
+    for stream_id in stream_ids.iter() {
+        let stream = storage::get_stream(env, stream_id)
+            .ok_or(Error::TokenNotFound)?;
+            
+        // Verify recipient
+        if stream.recipient != *recipient {
+            return Err(Error::Unauthorized);
+        }
+        
+        // Check if cancelled
+        if stream.cancelled {
+            return Err(Error::InvalidParameters);
+        }
+    }
+    
+    // Second pass: claim from all eligible streams
+    let mut claimed_amounts = Vec::new(env);
+    
+    for stream_id in stream_ids.iter() {
+        let mut stream = storage::get_stream(env, stream_id).unwrap();
+        
+        // Calculate claimable amount
+        let claimable = calculate_claimable(env, &stream)?;
+        
+        if claimable > 0 {
+            // Update claimed amount
+            stream.claimed_amount = stream.claimed_amount
+                .checked_add(claimable)
+                .ok_or(Error::ArithmeticError)?;
+                
+            storage::set_stream(env, stream_id, &stream);
+            
+            // Emit event
+            events::emit_stream_claimed(env, stream_id, recipient, claimable);
+        }
+        
+        claimed_amounts.push_back(claimable);
+    }
+    
+    Ok(claimed_amounts)
+}
+
 /// Calculate claimable amount for a stream
 ///
 /// Calculates how much can be claimed based on vesting schedule.

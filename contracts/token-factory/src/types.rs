@@ -71,8 +71,8 @@ pub struct ContractMetadata {
 /// ```
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TokenInfo {
-    pub address: Address,
+pub struct Stream {
+    pub stream_id: String,
     pub creator: Address,
     pub name: String,
     pub symbol: String,
@@ -174,6 +174,11 @@ pub enum DataKey {
     StreamCount,                    // Total number of streams created
     Stream(u64),                    // Stream info by ID (using u64 for consistency)
     NextStreamId,                   // Next available stream ID
+    // Governance proposal keys
+    ProposalCount,                  // Total number of proposals created
+    Proposal(u64),                  // Proposal by ID
+    NextProposalId,                 // Next available proposal ID
+    ProposalVote(u64, Address),     // Vote by proposal ID and voter address
 }
 
 /// Contract error codes
@@ -243,7 +248,13 @@ pub enum Error {
     StreamNotFound = 29,
     StreamCancelled = 30,
     NothingToClaim = 31,
-    StreamPaused = 32,
+    InvalidTimeWindow = 32,
+    PayloadTooLarge = 33,
+    ProposalNotFound = 34,
+    VotingNotStarted = 35,
+    VotingEnded = 36,
+    AlreadyVoted = 37,
+    StreamPaused = 38,
 }
 
 /// Type of pending change
@@ -255,6 +266,62 @@ pub enum ChangeType {
     FeeUpdate,
     PauseUpdate,
     TreasuryUpdate,
+}
+
+/// Type of governance action
+///
+/// Identifies the type of action proposed in a governance proposal.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ActionType {
+    FeeChange,
+    TreasuryChange,
+    PauseContract,
+    UnpauseContract,
+    PolicyUpdate,
+}
+
+/// Vote choice for a proposal
+///
+/// Represents the voter's position on a proposal.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum VoteChoice {
+    For,
+    Against,
+    Abstain,
+}
+
+/// Governance proposal
+///
+/// Represents a proposal for a governance action with voting period.
+///
+/// # Fields
+/// * `id` - Unique proposal identifier
+/// * `proposer` - Address that created the proposal
+/// * `action_type` - Type of action being proposed
+/// * `payload` - Encoded action payload (bounded to 1024 bytes)
+/// * `start_time` - Voting start timestamp
+/// * `end_time` - Voting end timestamp
+/// * `eta` - Estimated time of execution after approval
+/// * `created_at` - Timestamp when proposal was created
+/// * `votes_for` - Number of votes in favor
+/// * `votes_against` - Number of votes against
+/// * `votes_abstain` - Number of abstain votes
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Proposal {
+    pub id: u64,
+    pub proposer: Address,
+    pub action_type: ActionType,
+    pub payload: Vec<u8>,
+    pub start_time: u64,
+    pub end_time: u64,
+    pub eta: u64,
+    pub created_at: u64,
+    pub votes_for: u32,
+    pub votes_against: u32,
+    pub votes_abstain: u32,
 }
 
 /// Pending change awaiting timelock expiry
