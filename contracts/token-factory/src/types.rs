@@ -147,6 +147,8 @@ pub struct FeeUpdate {
 /// * `NextChangeId` - Next available change ID
 /// * `CreatorTokens(Address)` - Vector of token indices for a creator
 /// * `CreatorTokenCount(Address)` - Number of tokens created by address
+/// * `TokenStreams(u32)` - Vector of stream IDs for a token
+/// * `TokenStreamCount(u32)` - Number of streams for a token
 /// * `TreasuryPolicy` - Treasury withdrawal policy
 /// * `WithdrawalPeriod` - Current withdrawal period tracking
 /// * `AllowedRecipient(Address)` - Whether address is allowed recipient
@@ -170,6 +172,8 @@ pub enum DataKey {
     NextChangeId,
     CreatorTokens(Address),
     CreatorTokenCount(Address),
+    TokenStreams(u32),
+    TokenStreamCount(u32),
     TreasuryPolicy,
     WithdrawalPeriod,
     AllowedRecipient(Address),
