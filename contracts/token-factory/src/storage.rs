@@ -1,6 +1,7 @@
 use soroban_sdk::{Address, Env};
 
-use crate::types::{DataKey, FactoryState, TokenInfo, Stream, StreamStatus};
+use crate::types::{DataKey, FactoryState, TokenInfo};
+use crate::stream_types::StreamInfo;
 
 // ============================================================
 // Storage Functions - Burn Tracking
@@ -1007,4 +1008,17 @@ pub fn get_vote(env: &Env, proposal_id: u64, voter: &Address) -> Option<crate::t
     env.storage()
         .persistent()
         .get(&DataKey::ProposalVote(proposal_id, voter.clone()))
+}
+
+
+// ============================================================
+// Storage Functions - Address Freezing
+// ============================================================
+
+pub fn is_address_frozen(_env: &Env, _token_address: &Address, _address: &Address) -> bool {
+    false
+}
+
+pub fn set_address_frozen(_env: &Env, _token_address: &Address, _address: &Address, _frozen: bool) {
+    // Stub implementation
 }

@@ -16,7 +16,7 @@ use crate::timelock::{
 };
 use crate::types::{ActionType, VoteChoice, Error};
 use crate::storage;
-use soroban_sdk::{testutils::Address as _, Env, Address, Vec};
+use soroban_sdk::{testutils::Address as _, Env, Address, Bytes};
 use soroban_sdk::testutils::Ledger;
 
 fn setup() -> (Env, Address, Address) {
@@ -36,10 +36,8 @@ fn setup() -> (Env, Address, Address) {
     (env, admin, treasury)
 }
 
-fn dummy_payload(env: &Env) -> Vec<u32> {
-    let mut v = Vec::new(env);
-    v.push_back(1u32);
-    v
+fn dummy_payload(env: &Env) -> Bytes {
+    Bytes::from_slice(env, &[1u8])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -840,16 +838,12 @@ fn test_payload_exactly_at_limit_accepted() {
     let current_time = env.ledger().timestamp();
     
     // Create payload exactly 1024 bytes
-    let mut max_payload = Vec::new(&env);
-    for _ in 0..1024 {
-        max_payload.push_back(1u32);
-    }
+    let max_payload = Bytes::from_array(&env, &[1u8; 1024]);
     
     let proposal_id = create_proposal(
         &env, &admin, ActionType::FeeChange, max_payload,
         current_time + 100, current_time + 86500, current_time + 90100,
     ).unwrap();
-    
     let proposal = get_proposal(&env, proposal_id).unwrap();
     assert_eq!(proposal.payload.len(), 1024);
 }

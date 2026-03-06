@@ -71,11 +71,15 @@ pub fn create_token_internal(
         symbol: params.symbol.clone(),
         decimals: params.decimals,
         total_supply: params.initial_supply,
+        initial_supply: params.initial_supply,
+        max_supply: None,
         metadata_uri: params.metadata_uri.clone(),
         created_at: env.ledger().timestamp(),
         total_burned: 0,
         burn_count: 0,
+        is_paused: false,
         clawback_enabled: false,
+        freeze_enabled: false,
     };
 
     // Store token info
@@ -90,6 +94,10 @@ pub fn create_token_internal(
         env,
         &token_address,
         creator,
+        &params.name,
+        &params.symbol,
+        params.decimals,
+        params.initial_supply,
     );
 
     Ok(token_address)

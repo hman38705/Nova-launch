@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env, Vec};
+use soroban_sdk::{Address, Env, Bytes};
 #[cfg(test)]
 use soroban_sdk::testutils::Ledger;
 use crate::types::{Error, TimelockConfig, PendingChange, ChangeType, Proposal, ActionType, VoteChoice};
@@ -451,7 +451,7 @@ pub fn create_proposal(
     env: &Env,
     proposer: &Address,
     action_type: ActionType,
-    payload: Vec<u8>,
+    payload: Bytes,
     start_time: u64,
     end_time: u64,
     eta: u64,

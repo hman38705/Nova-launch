@@ -1,5 +1,6 @@
 use soroban_sdk::{Address, Env, Vec};
-use crate::types::{Error, PaginatedTokens, TokenInfo};
+use crate::types::{Error, PaginatedTokens, TokenInfo, PaginationCursor};
+use crate::stream_types::{StreamInfo, PaginatedStreams};
 use crate::storage;
 
 /// Maximum number of tokens per page
@@ -170,7 +171,7 @@ pub fn get_streams_by_token(
     // Determine starting position
     let start_pos = cursor
         .as_ref()
-        .and_then(|c| c.next_index)
+        .map(|c| c.next_index)
         .unwrap_or(0);
     
     // Check if we're past the end
@@ -193,11 +194,18 @@ pub fn get_streams_by_token(
         // For now, create a placeholder - this will be replaced when stream storage is implemented
         let stream_info = StreamInfo {
             id: stream_id,
-            creator: Address::generate(env),
-            recipient: Address::generate(env),
+            creator: Address::from_string(&soroban_sdk::String::from_str(env, "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF")),
+            recipient: Address::from_string(&soroban_sdk::String::from_str(env, "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF")),
+            token_index: 0,
             amount: 0,
+            start_time: 0,
+            end_time: 0,
+            claimed_amount: 0,
             metadata: None,
             created_at: env.ledger().timestamp(),
+            claimed: false,
+            paused: false,
+            cancelled: false,
         };
         
         streams.push_back(stream_info);
@@ -208,7 +216,7 @@ pub fn get_streams_by_token(
     // Determine next cursor
     let next_cursor = if current_pos < stream_ids.len() {
         Some(PaginationCursor {
-            next_index: Some(current_pos),
+            next_index: current_pos,
         })
     } else {
         None
@@ -482,7 +490,6 @@ mod tests {
         let result2 = get_tokens_by_creator(&env, &creator2, None, Some(20)).unwrap();
         assert_eq!(result2.tokens.len(), 5);
     }
-}
 
     // ═══════════════════════════════════════════════════════════════════════
     // Stream Query Tests
@@ -506,7 +513,9 @@ mod tests {
             burn_count: 0,
             metadata_uri: None,
             created_at: env.ledger().timestamp(),
+            is_paused: false,
             clawback_enabled: false,
+            freeze_enabled: false,
         };
         
         let token_index = 0;
@@ -762,3 +771,5 @@ mod tests {
         }
     }
 
+
+}
