@@ -135,16 +135,29 @@ pub struct StreamPausedV1 {
 }
 
 #[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StreamStatus {
+    Active,
+    Paused,
+    Cancelled,
+    Completed,
+}
+
+#[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TokenInfo {
-    pub address: Address,
+pub struct Stream {
+    pub stream_id: String,
     pub creator: Address,
-    pub name: String,
-    pub symbol: String,
-    pub decimals: u32,
-    pub total_supply: i128,
-    pub metadata_uri: Option<String>,
+    pub beneficiary: Address,
+    pub token_address: Address,
+    pub total_amount: i128,
+    pub start_time: u64,
+    pub duration_seconds: u64,
+    pub claimed_amount: i128,
+    pub status: StreamStatus,
     pub created_at: u64,
+    pub last_claim_at: Option<u64>,
+    pub claim_count: u32,
 }
 
 #[contracttype]
@@ -156,6 +169,8 @@ pub enum DataKey {
     MetadataFee,
     TokenCount,
     Token(u32), // Token index -> TokenInfo
+    StreamCount,
+    Stream(String), // Stream ID -> Stream
 }
 
 #[contracterror]
@@ -167,4 +182,7 @@ pub enum Error {
     TokenNotFound = 4,
     MetadataAlreadySet = 5,
     AlreadyInitialized = 6,
+    StreamNotFound = 7,
+    StreamNotActive = 8,
+    InsufficientBalance = 9,
 }

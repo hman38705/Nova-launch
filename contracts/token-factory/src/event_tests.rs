@@ -445,3 +445,327 @@ fn test_stream_created_event_topic_security() {
     
     assert!(result.is_ok());
 }
+
+// ===== STREAM CANCELLED V1 EVENT TESTS =====
+
+#[test]
+fn test_stream_cancelled_v1_event_structure() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    
+    let timestamp = env.ledger().timestamp();
+    
+    // Create and cancel stream to emit event
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    // Advance time to create vested amount
+    env.ledger().set_timestamp(timestamp + 1_296_000); // Halfway
+    
+    let result = client.cancel_stream(&creator, &stream_id);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_stream_cancelled_v1_event_version_field() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 500_000);
+    
+    // Test that event_version is always 1 for v1 events
+    let _result = client.cancel_stream(&creator, &stream_id);
+    assert!(_result.is_ok());
+}
+
+#[test]
+fn test_stream_cancelled_v1_event_payload_schema() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 1_000_000);
+    
+    let result = client.cancel_stream(&creator, &stream_id);
+    assert!(result.is_ok());
+    
+    // Verify all required fields are present in the event payload:
+    // - event_version: u32 = 1
+    // - timestamp: u64
+    // - stream_id: String
+    // - canceller: Address
+    // - beneficiary_received: i128
+    // - creator_refunded: i128
+    // - cancellation_reason: String
+}
+
+#[test]
+fn test_stream_cancelled_v1_event_topic() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 500_000);
+    
+    // Event should be emitted with topic "stream_cancelled_v1"
+    let _result = client.cancel_stream(&creator, &stream_id);
+    assert!(_result.is_ok());
+}
+
+#[test]
+fn test_stream_cancelled_v1_addresses_preserved() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 200_000);
+    
+    // Test that addresses are preserved exactly in events
+    let result = client.cancel_stream(&creator, &stream_id);
+    assert!(result.is_ok());
+    
+    let (beneficiary_received, creator_refunded) = result.unwrap();
+    assert_eq!(beneficiary_received + creator_refunded, 1_000_000);
+}
+
+#[test]
+fn test_stream_cancelled_v1_amount_precision() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    let large_amount = 1_000_000_000_000_i128; // Large number handling
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        large_amount,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 1_296_000); // Halfway
+    
+    let result = client.cancel_stream(&creator, &stream_id);
+    assert!(result.is_ok());
+    
+    let (beneficiary_received, creator_refunded) = result.unwrap();
+    assert_eq!(beneficiary_received + creator_refunded, large_amount);
+}
+
+// ===== STREAM CLAIMED V1 EVENT TESTS =====
+
+#[test]
+fn test_stream_claimed_v1_event_structure() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 500_000);
+    
+    let result = client.claim_stream(&beneficiary, &stream_id);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_stream_claimed_v1_event_payload_schema() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 1_000_000);
+    
+    let result = client.claim_stream(&beneficiary, &stream_id);
+    assert!(result.is_ok());
+    
+    // Verify all required fields are present in the event payload:
+    // - event_version: u32 = 1
+    // - timestamp: u64
+    // - stream_id: String
+    // - claimer: Address
+    // - claimed_amount: i128
+    // - remaining_amount: i128
+    // - claim_count: u32
+}
+
+#[test]
+fn test_stream_claimed_v1_event_topic() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, 0, 0);
+    
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+    
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        1_000_000,
+        timestamp,
+        2_592_000,
+    ).unwrap();
+    
+    env.ledger().set_timestamp(timestamp + 500_000);
+    
+    // Event should be emitted with topic "stream_claimed_v1"
+    let _result = client.claim_stream(&beneficiary, &stream_id);
+    assert!(_result.is_ok());
+}

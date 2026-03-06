@@ -351,3 +351,255 @@ fn test_create_token_invalid_parameters() {
     );
     */
 }
+
+// Stream tests
+
+#[test]
+fn test_cancel_stream_before_end() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, &0, &0);
+
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+
+    let start_time = env.ledger().timestamp();
+    let duration = 1000; // 1000 seconds
+    let total_amount = 1000;
+
+    // Create stream
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        &total_amount,
+        &start_time,
+        &duration,
+    );
+
+    // Advance time to halfway through stream
+    env.ledger().set_timestamp(start_time + 500);
+
+    // Cancel stream
+    let result = client.cancel_stream(&creator, &stream_id);
+    assert!(result.is_ok());
+    
+    let (beneficiary_received, creator_refunded) = result.unwrap();
+    
+    // At halfway point, beneficiary should get 500, creator gets 500 back
+    assert_eq!(beneficiary_received, 500);
+    assert_eq!(creator_refunded, 500);
+}
+
+#[test]
+fn test_cancel_stream_after_claim() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, &0, &0);
+
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+
+    let start_time = env.ledger().timestamp();
+    let duration = 1000;
+    let total_amount = 1000;
+
+    // Create stream
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        &total_amount,
+        &start_time,
+        &duration,
+    );
+
+    // Advance time to halfway and claim
+    env.ledger().set_timestamp(start_time + 500);
+    let claim_result = client.claim_stream(&beneficiary, &stream_id);
+    assert!(claim_result.is_ok());
+    assert_eq!(claim_result.unwrap(), 500);
+
+    // Advance time a bit more
+    env.ledger().set_timestamp(start_time + 600);
+
+    // Cancel stream
+    let cancel_result = client.cancel_stream(&creator, &stream_id);
+    assert!(cancel_result.is_ok());
+    
+    let (beneficiary_received, creator_refunded) = cancel_result.unwrap();
+    
+    // Beneficiary should get additional vested amount (100 more), creator gets the rest
+    assert_eq!(beneficiary_received, 100);
+    assert_eq!(creator_refunded, 400);
+}
+
+#[test]
+fn test_cancel_stream_by_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, &0, &0);
+
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+
+    let start_time = env.ledger().timestamp();
+    let duration = 1000;
+    let total_amount = 1000;
+
+    // Create stream
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        &total_amount,
+        &start_time,
+        &duration,
+    );
+
+    // Advance time
+    env.ledger().set_timestamp(start_time + 200);
+
+    // Admin cancels stream
+    let result = client.cancel_stream(&admin, &stream_id);
+    assert!(result.is_ok());
+    
+    let (beneficiary_received, creator_refunded) = result.unwrap();
+    assert_eq!(beneficiary_received, 200);
+    assert_eq!(creator_refunded, 800);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #2)")]
+fn test_cancel_stream_unauthorized() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, &0, &0);
+
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let unauthorized = Address::generate(&env);
+    let token_address = Address::generate(&env);
+
+    let start_time = env.ledger().timestamp();
+
+    // Create stream
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        &1000,
+        &start_time,
+        &1000,
+    );
+
+    // Unauthorized user tries to cancel
+    client.cancel_stream(&unauthorized, &stream_id);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn test_cancel_completed_stream() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, &0, &0);
+
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+
+    let start_time = env.ledger().timestamp();
+    let duration = 1000;
+    let total_amount = 1000;
+
+    // Create stream
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        &total_amount,
+        &start_time,
+        &duration,
+    );
+
+    // Advance time past completion and claim everything
+    env.ledger().set_timestamp(start_time + duration + 1);
+    let claim_result = client.claim_stream(&beneficiary, &stream_id);
+    assert!(claim_result.is_ok());
+    assert_eq!(claim_result.unwrap(), 1000);
+
+    // Try to cancel completed stream
+    client.cancel_stream(&creator, &stream_id);
+}
+
+#[test]
+fn test_cancel_stream_at_start() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TokenFactory);
+    let client = TokenFactoryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    client.initialize(&admin, &treasury, &0, &0);
+
+    let creator = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_address = Address::generate(&env);
+
+    let start_time = env.ledger().timestamp() + 1000; // Future start
+    let duration = 1000;
+    let total_amount = 1000;
+
+    // Create stream
+    let stream_id = client.create_stream(
+        &creator,
+        &beneficiary,
+        &token_address,
+        &total_amount,
+        &start_time,
+        &duration,
+    );
+
+    // Cancel before start
+    let result = client.cancel_stream(&creator, &stream_id);
+    assert!(result.is_ok());
+    
+    let (beneficiary_received, creator_refunded) = result.unwrap();
+    assert_eq!(beneficiary_received, 0); // Nothing vested yet
+    assert_eq!(creator_refunded, 1000);
+}
